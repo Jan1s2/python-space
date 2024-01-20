@@ -1,7 +1,8 @@
 from kivy.config import Config
-Config.set('graphics', 'width', '500')
-Config.set('graphics', 'height', '800')
-Config.set('graphics', 'resizable', False)
+
+Config.set("graphics", "width", "500")
+Config.set("graphics", "height", "800")
+Config.set("graphics", "resizable", False)
 import kivy
 from kivy.uix.widget import Widget
 from kivy.app import App
@@ -21,12 +22,15 @@ INVADER_SIZE = (40, 40)
 COOLDOWN_MIN = 1
 COOLDOWN_MAX = 5
 
+
 class Target(Enum):
     PLAYER = 1
     ENEMY = 2
 
+
 class Invader(Widget):
     source = ObjectProperty(None)
+
     def __init__(self, pos: Tuple[int, int], **kwargs):
         super(Invader, self).__init__(**kwargs)
         self.__base_pos = pos
@@ -72,8 +76,11 @@ class Player(Widget):
     def shoot(self):
         return Projectile(self.pos, Target.ENEMY, (0, 1))
 
+
 class Projectile(Widget):
-    def __init__(self, pos: Tuple[int, int], target: Target, velocity: Tuple[int, int], **kwargs):
+    def __init__(
+        self, pos: Tuple[int, int], target: Target, velocity: Tuple[int, int], **kwargs
+    ):
         super(Projectile, self).__init__(**kwargs)
         self.pos: Tuple[int, int] = pos
         self.__target = target
@@ -82,12 +89,14 @@ class Projectile(Widget):
     @property
     def target(self):
         return self.__target
+
     def move(self):
         self.pos = (self.pos[0] + self.__vel[0], self.pos[1] + self.__vel[1])
 
     @property
     def velocity(self):
         return self.__vel
+
 
 class SpaceInvadersGame(Widget):
     def __init__(self, **kwargs):
@@ -99,7 +108,11 @@ class SpaceInvadersGame(Widget):
         self.__cooldown = 0
 
         center_x = Window.width / 2
-        start_x = center_x - ((COLUMNS - 1) * (INVADER_SIZE[0] + GAP)) / 2 - INVADER_SIZE[0] / 2
+        start_x = (
+            center_x
+            - ((COLUMNS - 1) * (INVADER_SIZE[0] + GAP)) / 2
+            - INVADER_SIZE[0] / 2
+        )
 
         total_height = ROWS * (INVADER_SIZE[1] + GAP) - GAP
         start_y = Window.height - total_height
@@ -117,7 +130,7 @@ class SpaceInvadersGame(Widget):
         invader = Invader(pos)
         self.add_widget(invader)
         return invader
-    
+
     def should_shoot(self):
         print(self.__cooldown)
         return self.__cooldown == 0 and randrange(0, 40) > 30
@@ -135,7 +148,7 @@ class SpaceInvadersGame(Widget):
             attack = self.__invaders[self.generate_source()].shoot()
             self.__projectiles.append(attack)
             self.add_widget(attack)
-            self.__cooldown = 60* randint(COOLDOWN_MIN, COOLDOWN_MAX) 
+            self.__cooldown = 60 * randint(COOLDOWN_MIN, COOLDOWN_MAX)
         for projectile in self.__projectiles:
             projectile.move()
 
@@ -143,20 +156,19 @@ class SpaceInvadersGame(Widget):
         self.__keyboard.unbind(on_key_down=self._on_keyboard_down)
         self.__keyboard = None
 
-
     def _on_keyboard_down(self, keyboard, keycode, text, modifiers):
         print(keycode)
 
         match keycode[1]:
-            case 'escape':
+            case "escape":
                 keyboard.release()
-            case 'a':
+            case "a":
                 pass
                 # self.player.move_left()
-            case 'd':
+            case "d":
                 pass
                 # self.player.move_right()
-            case 'space':
+            case "space":
                 pass
                 # self.player.shoot()
 
@@ -164,11 +176,13 @@ class SpaceInvadersGame(Widget):
         # the system.
         return True
 
+
 class SpaceInvadersApp(App):
     def build(self):
         game = SpaceInvadersGame()
         Clock.schedule_interval(game.update, 1.0 / 60.0)
         return game
+
 
 if __name__ == "__main__":
     SpaceInvadersApp().run()
