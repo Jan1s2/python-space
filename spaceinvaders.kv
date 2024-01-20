@@ -1,15 +1,21 @@
 <Invader>:
-    size: 20, 20
+    size: 40, 40
+    Image:
+        source: root.source
+        pos: root.pos
+        size: root.size
+<Projectile>:
+    size: 5, 25
     canvas:
         Color:
-            rgb: 0, 0, 0 
-        Ellipse:
+            rgba: 1, 1, 1, 1
+        Rectangle:
             pos: self.pos
             size: self.size
 <SpaceInvadersGame>:
     canvas:
         Color:
-            rgba: 1, 1, 1, 1
+            rgba: 0, 0, 0, 1
         Rectangle:
             pos: self.pos
             size: self.size
