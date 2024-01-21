@@ -12,10 +12,21 @@
         Rectangle:
             pos: self.pos
             size: self.size
+<Player>:
+    size: 40, 40
+    Image:
+        source: "player.png"
+        pos: root.pos
+        size: root.size
 <SpaceInvadersGame>:
+    player: player
     canvas:
         Color:
-            rgba: 0, 0, 0, 1
+            rgba: 1, 0, 0, 1
         Rectangle:
             pos: self.pos
             size: self.size
+    Player:
+        id: player
+        center_x: root.width / 2
+        center_y: 20

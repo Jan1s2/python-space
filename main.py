@@ -1,6 +1,6 @@
 from kivy.config import Config
 
-Config.set("graphics", "width", "500")
+Config.set("graphics", "width", "700")
 Config.set("graphics", "height", "800")
 Config.set("graphics", "resizable", False)
 import kivy
@@ -21,41 +21,42 @@ GAP = 10
 INVADER_SIZE = (40, 40)
 COOLDOWN_MIN = 1
 COOLDOWN_MAX = 5
+SHIP_VELOCITY = 3
+MAX_MOVEMENT = Window.width / 7
 
 
 class Target(Enum):
     PLAYER = 1
     ENEMY = 2
 
-
 class Invader(Widget):
     source = ObjectProperty(None)
 
-    def __init__(self, pos: Tuple[int, int], **kwargs):
+    def __init__(self, pos: List[int], **kwargs):
         super(Invader, self).__init__(**kwargs)
         self.__base_pos = pos
         self.pos = pos
-        print(self.pos)
+        # print(self.pos)
         self._last_shot = 0
         self.__velocity: Tuple[int, int] = (1, 0)
 
         self.source = "invader.png"
 
     def shoot(self):
-        return Projectile(self.pos, Target.PLAYER, (0, -3))
+        return Projectile(self.center, Target.PLAYER, (0, -3))
 
     def is_out_of_bounds_x(self):
         x, base_x = self.pos[0], self.__base_pos[0]
-        return x - 20 > base_x or x + 20 < base_x
+        return x - MAX_MOVEMENT > base_x or x + MAX_MOVEMENT < base_x
 
     def reverse_velocity_x(self):
         self.__velocity = (-self.__velocity[0], -self.__velocity[1])
 
     def move_down(self):
-        self.pos = (self.pos[0], self.pos[1] - 5)
+        self.pos[1] -= 5
 
     def move_with_velocity(self):
-        self.pos = (self.pos[0] + self.__velocity[0], self.pos[1] + self.__velocity[1])
+        self.pos = [pos + vel for pos, vel in zip(self.pos, self.__velocity)]
 
     def move(self):
         if self.is_out_of_bounds_x():
@@ -65,24 +66,29 @@ class Invader(Widget):
 
 
 class Player(Widget):
-    def __init__(self, x, y):
-        self.__x = x
-        self.__y = y
-
-    @property
-    def pos(self) -> Tuple[int, int]:
-        return (self.__x, self.__y)
+    def __init__(self, **kwargs):
+        super(Player, self).__init__(**kwargs)
 
     def shoot(self):
-        return Projectile(self.pos, Target.ENEMY, (0, 1))
+        return Projectile(self.center, Target.ENEMY, (0, 3))
+    
+    def check_bounds(self, velocity):
+        return self.pos[0] + velocity[0] > GAP and self.pos[0] + self.size[0] + velocity[0] < Window.width - GAP
 
+    def move(self, velocity):
+        if self.check_bounds(velocity):
+            self.pos = [pos + vel for pos, vel in zip(self.pos, velocity)]
+    def move_right(self):
+        self.move((SHIP_VELOCITY, 0))
+    def move_left(self):
+        self.move((-SHIP_VELOCITY, 0))
 
 class Projectile(Widget):
     def __init__(
-        self, pos: Tuple[int, int], target: Target, velocity: Tuple[int, int], **kwargs
+        self, pos: List[int], target: Target, velocity: Tuple[int, int], **kwargs
     ):
         super(Projectile, self).__init__(**kwargs)
-        self.pos: Tuple[int, int] = pos
+        self.pos: List[int] = pos
         self.__target = target
         self.__vel = velocity
 
@@ -91,14 +97,14 @@ class Projectile(Widget):
         return self.__target
 
     def move(self):
-        self.pos = (self.pos[0] + self.__vel[0], self.pos[1] + self.__vel[1])
+        self.pos = [pos + vel for pos, vel in zip(self.pos, self.__vel)]
 
     @property
     def velocity(self):
         return self.__vel
 
-
 class SpaceInvadersGame(Widget):
+    player = ObjectProperty(None)
     def __init__(self, **kwargs):
         super(SpaceInvadersGame, self).__init__(**kwargs)
         self.__keyboard = Window.request_keyboard(self._keyboard_closed, self)
@@ -132,11 +138,16 @@ class SpaceInvadersGame(Widget):
         return invader
 
     def should_shoot(self):
-        print(self.__cooldown)
         return self.__cooldown == 0 and randrange(0, 40) > 30
 
     def generate_source(self):
         return randrange(0, ROWS * COLUMNS)
+
+    def generate_attack(self, src):
+        attack = src.shoot()
+        self.__projectiles.append(attack)
+        self.add_widget(attack)
+        return attack
 
     def update(self, dt):
         if self.__cooldown > 0:
@@ -145,9 +156,7 @@ class SpaceInvadersGame(Widget):
             invader.move()
             pass
         if self.should_shoot():
-            attack = self.__invaders[self.generate_source()].shoot()
-            self.__projectiles.append(attack)
-            self.add_widget(attack)
+            self.generate_attack(self.__invaders[self.generate_source()])
             self.__cooldown = 60 * randint(COOLDOWN_MIN, COOLDOWN_MAX)
         for projectile in self.__projectiles:
             projectile.move()
@@ -163,13 +172,19 @@ class SpaceInvadersGame(Widget):
             case "escape":
                 keyboard.release()
             case "a":
-                pass
+                self.player.move_left()
                 # self.player.move_left()
             case "d":
-                pass
+                self.player.move_right()
+                # self.player.move_left()
+            case "left":
+                self.player.move_left()
+            case "right":
+                self.player.move_right()
+
                 # self.player.move_right()
-            case "space":
-                pass
+            case "spacebar":
+               self.generate_attack(self.player)
                 # self.player.shoot()
 
         # Return True to accept the key. Otherwise, it will be used by
