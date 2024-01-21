@@ -23,6 +23,13 @@ COOLDOWN_MIN = 1
 COOLDOWN_MAX = 5
 SHIP_VELOCITY = 3
 MAX_MOVEMENT = Window.width / 7
+INVADER_IMAGES = [
+        "invader-5.png",
+        "invader-4.png",
+        "invader-3.png",
+        "invader-2.png",
+        "invader-1.png",
+        ]
 
 
 class Target(Enum):
@@ -32,7 +39,7 @@ class Target(Enum):
 class Invader(Widget):
     source = ObjectProperty(None)
 
-    def __init__(self, pos: List[int], **kwargs):
+    def __init__(self, pos: List[int], image: str, **kwargs):
         super(Invader, self).__init__(**kwargs)
         self.__base_pos = pos
         self.pos = pos
@@ -40,7 +47,10 @@ class Invader(Widget):
         self._last_shot = 0
         self.__velocity: Tuple[int, int] = (1, 0)
 
-        self.source = "invader.png"
+        self.source = image
+
+    def get_type(self):
+        return Target.ENEMY
 
     def shoot(self):
         return Projectile(self.center, Target.PLAYER, (0, -3))
@@ -68,14 +78,41 @@ class Invader(Widget):
 class Player(Widget):
     def __init__(self, **kwargs):
         super(Player, self).__init__(**kwargs)
+        self.__cooldown = 0
+        self.__lives = 3
 
     def shoot(self):
-        return Projectile(self.center, Target.ENEMY, (0, 3))
+        res: Projectile|None = None
+        if self.__cooldown == 0:
+            res = Projectile(self.center, Target.ENEMY, (0, 3))
+            self.__cooldown = 60 * randint(COOLDOWN_MIN, COOLDOWN_MAX) / 4
+        return res
+
+    def get_type(self):
+        return Target.PLAYER
+
+    @property
+    def lives(self):
+        return self.__lives
+    @lives.setter
+    def lives(self, change):
+        if self.__lives + change >= 0:
+            self.__lives += change
+
+    @property
+    def cooldown(self):
+        return self.__cooldown
+    @cooldown.setter
+    def cooldown(self, change):
+        if self.__cooldown + change >= 0:
+            self.__cooldown = self.__cooldown + change
     
     def check_bounds(self, velocity):
-        return self.pos[0] + velocity[0] > GAP and self.pos[0] + self.size[0] + velocity[0] < Window.width - GAP
+        return self.x + velocity[0] > GAP and self.x + self.width + velocity[0] < Window.width - GAP
 
     def move(self, velocity):
+        if self.__cooldown > 0:
+            self.__cooldown -= 1
         if self.check_bounds(velocity):
             self.pos = [pos + vel for pos, vel in zip(self.pos, velocity)]
     def move_right(self):
@@ -90,18 +127,18 @@ class Projectile(Widget):
         super(Projectile, self).__init__(**kwargs)
         self.pos: List[int] = pos
         self.__target = target
-        self.__vel = velocity
+        self.__velocity = velocity
 
     @property
     def target(self):
         return self.__target
 
     def move(self):
-        self.pos = [pos + vel for pos, vel in zip(self.pos, self.__vel)]
+        self.pos = [pos + vel for pos, vel in zip(self.pos, self.__velocity)]
 
     @property
     def velocity(self):
-        return self.__vel
+        return self.__velocity
 
 class SpaceInvadersGame(Widget):
     player = ObjectProperty(None)
@@ -121,19 +158,16 @@ class SpaceInvadersGame(Widget):
         )
 
         total_height = ROWS * (INVADER_SIZE[1] + GAP) - GAP
-        start_y = Window.height - total_height
+        start_y = Window.height - total_height - 50
         for i in range(ROWS):
             for j in range(COLUMNS):
-                # x = center_x - ((COLUMNS - 1) * (INVADER_SIZE[0] + GAP)) / 2 - (INVADER_SIZE[0] + GAP) * j
-                # y = center_y - ((ROWS - 1) * (INVADER_SIZE[1] + GAP)) / 2 + (INVADER_SIZE[1] + GAP) * i
                 x = start_x + (INVADER_SIZE[0] + GAP) * j
-                # y = start_y - (INVADER_SIZE[1] + GAP) * i
                 y = start_y + (INVADER_SIZE[1] + GAP) * i
+                image = INVADER_IMAGES[i]
+                self.__invaders.append(self.create_invader((x, y), image))
 
-                self.__invaders.append(self.create_invader((x, y)))
-
-    def create_invader(self, pos):
-        invader = Invader(pos)
+    def create_invader(self, pos, image):
+        invader = Invader(pos, image)
         self.add_widget(invader)
         return invader
 
@@ -141,15 +175,20 @@ class SpaceInvadersGame(Widget):
         return self.__cooldown == 0 and randrange(0, 40) > 30
 
     def generate_source(self):
-        return randrange(0, ROWS * COLUMNS)
+        res = randrange(0, len(self.__invaders))
+        print(res)
+        return res
 
     def generate_attack(self, src):
         attack = src.shoot()
-        self.__projectiles.append(attack)
-        self.add_widget(attack)
+        if attack is not None:
+            self.__projectiles.append(attack)
+            self.add_widget(attack)
         return attack
 
     def update(self, dt):
+        if self.player.cooldown > 0:
+            self.player.cooldown = -1
         if self.__cooldown > 0:
             self.__cooldown -= 1
         for invader in self.__invaders:
@@ -160,6 +199,33 @@ class SpaceInvadersGame(Widget):
             self.__cooldown = 60 * randint(COOLDOWN_MIN, COOLDOWN_MAX)
         for projectile in self.__projectiles:
             projectile.move()
+
+        for projectile in self.__projectiles:
+            if self.check_collision(projectile, self.player):
+                print("HIT")
+                self.player.lives = -1
+                print(f"Player HP: {self.player.lives}")
+                self.remove_widget(projectile)
+                self.__projectiles.remove(projectile)
+            for invader in self.__invaders:
+                if self.check_collision(projectile, invader):
+                    print("HIT ENEMY")
+                    self.remove_widget(projectile)
+                    self.__projectiles.remove(projectile)
+                    self.remove_widget(invader)
+                    self.__invaders.remove(invader)
+                    break
+
+    def check_collision(self, projectile, target):
+        # Simple bounding box collision check
+        return (
+            projectile.target == target.get_type()
+            and projectile.x < target.x + target.width
+            and projectile.x + projectile.width > target.x
+            and projectile.y < target.y + target.height
+            and projectile.y + projectile.height > target.y
+        )
+
 
     def _keyboard_closed(self):
         self.__keyboard.unbind(on_key_down=self._on_keyboard_down)
