@@ -51,7 +51,7 @@ class Player(Widget):
     def cooldown(self, change):
         """Set the cooldown of the player's shot with the given change."""
         if self.__cooldown + change >= 0:
-            self.__cooldown = self.__cooldown + change
+            self.__cooldown += change
     
     def check_bounds(self, velocity):
         """Check if the player's movement is within the screen bounds."""
