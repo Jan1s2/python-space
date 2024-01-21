@@ -91,11 +91,11 @@ class SpaceInvadersGame(Widget):
         print(res)
         return res
 
-    def generate_attack(self, src):
+    def generate_attack(self, src:Invader|Player):
         """Generate an attack (projectile) from a source invader.
 
         Args:
-            src (Invader): Source invader.
+            src (Invader|Player): Source of the projectile.
 
         Returns:
             Projectile: The generated projectile.
