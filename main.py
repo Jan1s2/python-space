@@ -6,7 +6,7 @@ Config.set("graphics", "resizable", False)
 import kivy
 from kivy.uix.widget import Widget
 from kivy.app import App
-from kivy.properties import ObjectProperty
+from kivy.properties import ObjectProperty, StringProperty, NumericProperty
 from kivy.core.window import Window
 from kivy.uix.boxlayout import BoxLayout
 from kivy.clock import Clock
@@ -56,14 +56,14 @@ class Invader(Widget):
         return Projectile(self.center, Target.PLAYER, (0, -3))
 
     def is_out_of_bounds_x(self):
-        x, base_x = self.pos[0], self.__base_pos[0]
+        x, base_x = self.x, self.__base_pos[0]
         return x - MAX_MOVEMENT > base_x or x + MAX_MOVEMENT < base_x
 
     def reverse_velocity_x(self):
         self.__velocity = (-self.__velocity[0], -self.__velocity[1])
 
     def move_down(self):
-        self.pos[1] -= 5
+        self.y -= 5
 
     def move_with_velocity(self):
         self.pos = [pos + vel for pos, vel in zip(self.pos, self.__velocity)]
@@ -149,6 +149,7 @@ class SpaceInvadersGame(Widget):
         self.__invaders: List[Invader] = []
         self.__projectiles: List[Projectile] = []
         self.__cooldown = 0
+        self.__score = 0
 
         center_x = Window.width / 2
         start_x = (
@@ -165,6 +166,16 @@ class SpaceInvadersGame(Widget):
                 y = start_y + (INVADER_SIZE[1] + GAP) * i
                 image = INVADER_IMAGES[i]
                 self.__invaders.append(self.create_invader((x, y), image))
+    
+    def check_end(self):
+        for invader in self.__invaders:
+            if invader.y < 0:
+                return True
+        return self.player.lives == 0 or len(self.__invaders) == 0
+
+    def end(self):
+        Clock.unschedule(self.update)
+        self._keyboard_closed()
 
     def create_invader(self, pos, image):
         invader = Invader(pos, image)
@@ -187,6 +198,10 @@ class SpaceInvadersGame(Widget):
         return attack
 
     def update(self, dt):
+        self.ids.lives_label.text = f"Lives: {self.player.lives}"
+        self.ids.score_label.text = f"Score: {self.__score}"
+        if self.check_end():
+            self.end()
         if self.player.cooldown > 0:
             self.player.cooldown = -1
         if self.__cooldown > 0:
@@ -207,6 +222,7 @@ class SpaceInvadersGame(Widget):
                 print(f"Player HP: {self.player.lives}")
                 self.remove_widget(projectile)
                 self.__projectiles.remove(projectile)
+                self.__score -= 50
             for invader in self.__invaders:
                 if self.check_collision(projectile, invader):
                     print("HIT ENEMY")
@@ -214,6 +230,7 @@ class SpaceInvadersGame(Widget):
                     self.__projectiles.remove(projectile)
                     self.remove_widget(invader)
                     self.__invaders.remove(invader)
+                    self.__score += 20
                     break
 
     def check_collision(self, projectile, target):
