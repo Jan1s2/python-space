@@ -1,4 +1,5 @@
 from kivy.uix.widget import Widget
+from kivy.vector import Vector
 from typing import List,Tuple
 
 from target import Target
@@ -19,8 +20,8 @@ class Projectile(Widget):
         """
         super(Projectile, self).__init__(**kwargs)
         self.pos: List[int] = pos
-        self.__target = target
-        self.__velocity = velocity
+        self.__target: Target = target
+        self.__velocity = Vector(velocity)
 
     @property
     def target(self):
@@ -29,7 +30,8 @@ class Projectile(Widget):
 
     def move(self):
         """Move the projectile based on its velocity."""
-        self.pos = [pos + vel for pos, vel in zip(self.pos, self.__velocity)]
+        # self.pos = [pos + vel for pos, vel in zip(self.pos, self.__velocity)]
+        self.pos = self.__velocity + self.pos
 
     @property
     def velocity(self):

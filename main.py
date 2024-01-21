@@ -165,10 +165,7 @@ class SpaceInvadersGame(Widget):
         # Simple bounding box collision check
         return (
             projectile.target == target.get_type()
-            and projectile.x < target.x + target.width
-            and projectile.x + projectile.width > target.x
-            and projectile.y < target.y + target.height
-            and projectile.y + projectile.height > target.y
+            and projectile.collide_widget(target)
         )
 
     def _keyboard_closed(self):

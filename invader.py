@@ -2,6 +2,7 @@ from kivy.uix.widget import Widget
 from kivy.properties import ObjectProperty
 from typing import List,Tuple
 
+from kivy.vector import Vector
 
 from target import Target
 from projectile import Projectile
@@ -12,7 +13,7 @@ class Invader(Widget):
 
     source = ObjectProperty(None)
 
-    def __init__(self, pos: List[int], image: str, **kwargs):
+    def __init__(self, pos: List[int]|Tuple[int, int], image: str, **kwargs):
         """Initialize the Invader instance.
 
         Args:
@@ -24,7 +25,7 @@ class Invader(Widget):
         self.__base_pos = pos
         self.pos = pos
         self._last_shot = 0
-        self.__velocity: Tuple[int, int] = (1, 0)
+        self.__velocity: Vector = Vector(1, 0)
         self.source = image
 
     def get_type(self):
@@ -42,7 +43,7 @@ class Invader(Widget):
 
     def reverse_velocity_x(self):
         """Reverse the horizontal velocity of the invader."""
-        self.__velocity = (-self.__velocity[0], -self.__velocity[1])
+        self.__velocity = self.__velocity * -1 
 
     def move_down(self):
         """Move the invader down."""
@@ -50,7 +51,7 @@ class Invader(Widget):
 
     def move_with_velocity(self):
         """Move the invader according to its velocity."""
-        self.pos = [pos + vel for pos, vel in zip(self.pos, self.__velocity)]
+        self.pos = self.__velocity + self.pos
 
     def move(self):
         """Move the invader, handling boundary conditions."""
